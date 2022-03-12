@@ -124,5 +124,22 @@ done
 
 ### Ваш скрипт:
 ```bash
-???
+#!/usr/bin/env bash
+
+fileName=$1
+
+readarray msg < $fileName
+if ((${#msg} \> 31))
+then
+        echo "Commit message is longer than 30 letters"
+        exit 1
+else
+        echo $msg | grep -E "\[[A-Z]+-[0-9]+\]" > /dev/null 2>&1
+        if (($? != 0))
+        then
+                echo "There is no JIRA issue code in commit message"
+                exit 2
+        fi
+fi
+
 ```
