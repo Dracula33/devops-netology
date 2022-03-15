@@ -1,5 +1,5 @@
 # devops-netology 
-
+q
 Будут игнорированы в ./terraform/.gitignore:
 1. Все файлы во всех вложенных каталогах ./terraform
 2. Файлы с расширением tfstate
