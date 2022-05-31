@@ -107,7 +107,7 @@ test_database=# select * from orders;
 
 ---
 
-### Задача 4
+### Задача 4 ВАРИАНТ 1
 
 Добавил бы ограничения уникальности на таблицу или уникальный индекс в объявления таблиц;
 
@@ -198,5 +198,31 @@ Check constraints:
     "inh_2" CHECK (price <= 499)
 Inherits: orders
 ```
+
+---
+
+### Задача 4, ВАРИАНТ 2
+
+Нашел, что можно при помощи ONLY создавать общий уникальный индекс на таблицу, но это тоже не сработало с моими данными
+
+Бекап изменил так (добавил в конец):
+```commandline
+alter table only public.orders add unique (title);
+alter table public.orders_1 add unique (title);
+alter table public.orders_2 add unique (title);
+
+alter index public.orders_title_key ATTACH PARTITION orders_1_title_key;
+alter index public.orders_title_key ATTACH PARTITION orders_2_title_key;
+```
+При выполнении ругается на попытку добавить партицию к индексу. 
+```commandline
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+ALTER TABLE
+psql:/backup/test_database.sql:147: ERROR:  "orders_title_key" is not a table or partitioned index
+psql:/backup/test_database.sql:148: ERROR:  "orders_title_key" is not a table or partitioned index
+```
+Или это все из-за того, что у меня секионирование сделано на основе наследования (3 задача), и таблица orders создана без директивы `PARTITION BY` ? 
 
 ---
