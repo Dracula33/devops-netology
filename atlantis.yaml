@@ -1,7 +1,7 @@
 version: 3
 projects:
   - name: hw74
-    dir: terraform_test
+    dir: "/homeworks/Terraform cloudwork/terraform_test"
     workspace:
       - stage
       - prod
