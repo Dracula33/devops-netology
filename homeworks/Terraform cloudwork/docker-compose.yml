@@ -1,0 +1,19 @@
+version: "3"
+
+services:
+  atlantis:
+    image: dracula33/atlantis:0.1
+    container_name: atlantis
+    environment:
+      - USER=$USER
+      - TOKEN=$TOKEN
+      - YC_SERVICE_ACCOUNT_KEY_FILE=$YC_SERVICE_ACCOUNT_KEY_FILE
+      - YC_CLOUD_ID=$YC_CLOUD_ID
+      - YC_FOLDER_ID=$YC_FOLDER_ID
+    ports:
+      - "4141:4141"
+    volumes:
+      - ./key:/tmp/key
+      - ./atlantis_config:/tmp/
+    command: "server --gh-user=$USER --gh-token=$TOKEN --repo-allowlist=\"github.com/dracula33/devops-netology\" --repo-config=/tmp/server.yaml"
+
