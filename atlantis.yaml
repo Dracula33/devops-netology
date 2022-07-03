@@ -1,10 +1,10 @@
 version: 3
 projects:
-  - name: hw74
-    dir: "/homeworks/Terraform cloudwork/terraform_test"
-    workspace: stage
-    dir: "/homeworks/Terraform cloudwork/terraform_test"
-    workspace: prod
-    autoplan:
-      when_modified: ["*.tf"]
-      enabled: true
+- dir: "/homeworks/Terraform cloudwork/terraform_test"
+  workspace: stage
+- dir: "/homeworks/Terraform cloudwork/terraform_test"
+  workspace: prod
+
+  autoplan:
+    when_modified: ["*.tf"]
+    enabled: true
