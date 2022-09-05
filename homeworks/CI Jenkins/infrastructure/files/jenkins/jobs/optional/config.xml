@@ -1,0 +1,64 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job@1207.ve6191ff089f8">
+  <actions/>
+  <description>Необязательное задание про YC</description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        <hudson.model.StringParameterDefinition>
+          <name>YC_CLOUD_ID</name>
+          <description>значение cloud-id из вывода yc config list</description>
+          <defaultValue>&lt;ваш cloud-id&gt;</defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>YC_FOLDER_ID</name>
+          <description>значение folder-id из вывода yc config list</description>
+          <defaultValue>&lt;ваш folder-id&gt;</defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>YC_TOKEN</name>
+          <description>значение token из вывода yc config list</description>
+          <defaultValue>&lt;ваш token&gt;</defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+  </properties>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2759.v87459c4eea_ca_">
+    <script>node {
+    stage(&apos;Clone playbook&apos;) { 
+        git branch: &apos;main&apos;, url: &apos;https://github.com/Dracula33/example-fro-jenkins.git&apos;
+    }
+    stage(&apos;Get instance count&apos;) {
+        host_list = sh (returnStdout: true, script: &apos;grep -n ansible_host ./inventory/*.yml&apos;)
+        host_list_arr = host_list.split(&apos;\n&apos;)
+    }
+    stage(&apos;Create infrastructure&apos;) {
+        yc_net_stdout = sh (returnStdout: true, script: &apos;/home/jenkins/yandex-cloud/bin/yc vpc network create net_test --cloud-id $YC_CLOUD_ID --folder-id $YC_FOLDER_ID --token $YC_TOKEN --format json&apos;)
+        g_net_id = new groovy.json.JsonSlurper().parseText(yc_net_stdout).id
+        yc_subnet_stdout = sh (returnStdout: true, script: &quot;/home/jenkins/yandex-cloud/bin/yc vpc subnet create subnet_test --network-id $g_net_id --range 192.168.101.0/24 --zone ru-central1-a  --cloud-id $YC_CLOUD_ID --folder-id $YC_FOLDER_ID --token $YC_TOKEN --format json&quot;)
+        g_subnet_id = new groovy.json.JsonSlurper().parseText(yc_subnet_stdout).id
+        for (i = 0; i &lt; host_list_arr.size(); i++){
+            node_name=&apos;instance&apos; + i
+            yc_instance_stdout = sh (returnStdout: true, script: &quot;/home/jenkins/yandex-cloud/bin/yc compute instance create $node_name --zone ru-central1-a --hostname $node_name --create-boot-disk image-folder-id=standard-images,image-family=centos-7 --platform standard-v3 --cores 2 --memory 4 --core-fraction 20 --network-interface subnet-id=${g_subnet_id},nat-ip-version=ipv4 --ssh-key ~/.ssh/id_rsa.pub --preemptible  --cloud-id $YC_CLOUD_ID --folder-id $YC_FOLDER_ID --token $YC_TOKEN --format json&quot;)
+            g_instance_ip = new groovy.json.JsonSlurper().parseText(yc_instance_stdout).network_interfaces[0].primary_v4_address.one_to_one_nat.address
+            line_number=host_list_arr[i].substring(0, host_list_arr[i].indexOf(&quot;:&quot;))
+            sh &quot;sed -i &apos;$line_number s|ansible_host: .*\$|ansible_host: $g_instance_ip|&apos; ./inventory/*.yml&quot;
+        }
+    }
+    stage(&apos;Sleep while infrastructure is creating&apos;) {
+        sh &apos;sleep 30&apos;
+    }
+    stage(&apos;Run playbook&apos;) {
+        sh &apos;export ANSIBLE_HOST_KEY_CHECKING=false &amp;&amp; ansible-playbook -i inventory/test.yml site.yml&apos;
+    }
+}
+</script>
+    <sandbox>true</sandbox>
+  </definition>
+  <triggers/>
+  <disabled>false</disabled>
+</flow-definition>

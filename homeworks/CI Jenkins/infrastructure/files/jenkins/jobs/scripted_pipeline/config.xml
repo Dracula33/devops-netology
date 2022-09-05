@@ -1,0 +1,44 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job@1207.ve6191ff089f8">
+  <actions/>
+  <description>Задача по запуску скриптового пайплайна</description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        <hudson.model.BooleanParameterDefinition>
+          <name>PROD_RUN</name>
+          <description>Если не задано, то запускать плейбук с флагами --check и --diff</description>
+          <defaultValue>false</defaultValue>
+        </hudson.model.BooleanParameterDefinition>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+  </properties>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2759.v87459c4eea_ca_">
+    <script>node(&quot;linux&quot;){
+    stage(&quot;Git checkout&quot;){
+        git &apos;https://github.com/aragastmatb/example-playbook.git&apos;
+    }
+    stage(&quot;Sample define secret_check&quot;){
+        secret_check=true
+    }
+    stage(&quot;Run playbook&quot;){
+        if (secret_check){
+            ADD_PARAMS = &apos;&apos;
+            if (!params.PROD_RUN) {
+                ADD_PARAMS = &apos;--diff --check&apos;
+            }
+            sh &quot;ansible-playbook site.yml -i inventory/prod.yml $ADD_PARAMS&quot;
+        }
+        else{
+            echo &apos;need more action&apos;
+            echo &apos;secret_check = false&apos;
+        }
+        
+    }
+}</script>
+    <sandbox>true</sandbox>
+  </definition>
+  <triggers/>
+  <disabled>false</disabled>
+</flow-definition>

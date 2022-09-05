@@ -1,0 +1,14 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<slave>
+  <name>j-agent</name>
+  <description></description>
+  <remoteFS>/opt/jenkins_agent/</remoteFS>
+  <numExecutors>1</numExecutors>
+  <mode>NORMAL</mode>
+  <retentionStrategy class="hudson.slaves.RetentionStrategy$Always"/>
+  <launcher class="hudson.slaves.CommandLauncher" plugin="command-launcher@84.v4a_97f2027398">
+    <agentCommand>ssh {{ hostvars['jenkins-agent-01']['ansible_host'] }} java -jar /opt/jenkins_agent/agent.jar</agentCommand>
+  </launcher>
+  <label>linux</label>
+  <nodeProperties/>
+</slave>
