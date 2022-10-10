@@ -1,0 +1,58 @@
+---
+- name: Run TICK
+  hosts: tick
+  become: true
+  tasks:
+
+    - name: Installing tools
+      yum: >
+        name={{ item }}
+        state=present
+        update_cache=yes
+      with_items:
+          - git
+          - curl
+          - xdg-utils
+
+    - name: Add docker repository
+      command: yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+
+    - name: Installing docker package
+      yum: >
+        name={{ item }}
+        state=present
+        update_cache=yes
+      with_items:
+        - docker-ce
+        - docker-ce-cli
+        - containerd.io
+
+    - name: Enable docker daemon
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Install docker-compose
+      raw: $(curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/bin/docker-compose && chmod +x /usr/bin/docker-compose)
+
+    - name: Add rights to docker.sock
+      file:
+        path: /var/run/docker.sock
+        mode: o+rw
+
+    - name: Clone repo
+      git:
+        repo: https://github.com/influxdata/sandbox.git
+        dest: "./tick"
+
+    - name: Replace telegraf config
+      template:
+        src: telegraf.conf.j2
+        dest: "./tick/telegraf/telegraf.conf"
+
+    - name: start TICK
+      command: ./tick/sandbox up
+      ignore_errors: true
+
+...
