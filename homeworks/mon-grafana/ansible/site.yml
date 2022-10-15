@@ -1,0 +1,163 @@
+---
+- name: Install grafana
+  tags: grafana
+  hosts: monitor
+  tasks:
+
+    - name: check if grafana has downloaded
+      stat:
+        path: /tmp/grafana-enterprise-{{ grafana_version }}-1.x86_64.rpm
+      register: grafana_rpm_file
+      delegate_to: localhost
+
+#подразумевается, что для скачки на локальную машину доступ к рпм есть. К примеру, заданы HTTPS_PROXY или HTTP_PROXY
+    - name: download Grafana RPM
+      get_url:
+        url: https://dl.grafana.com/enterprise/release/grafana-enterprise-{{ grafana_version }}-1.x86_64.rpm
+        dest: "/tmp/"
+      delegate_to: localhost
+      when: not grafana_rpm_file.stat.exists
+
+    - name: copy Grafana RPM
+      copy:
+        src: /tmp/grafana-enterprise-{{ grafana_version }}-1.x86_64.rpm
+        dest: "./"
+
+    - name: install Grafana RPM
+      become: true
+      yum:
+        name: ./grafana-enterprise-{{ grafana_version }}-1.x86_64.rpm
+        state: present
+
+    - name: create grafana config
+      become: true
+      template:
+        src: grafana.ini.j2
+        dest: /etc/grafana/grafana.ini
+        owner: root
+        group: grafana
+
+    - name: create grafana datasource configs
+      become: true
+      template:
+        src: grafana/provisioning/datasources/prometheus.yaml.j2
+        dest: /etc/grafana/provisioning/datasources/prometheus.yaml
+        owner: root
+        group: grafana
+
+    - name: copy grafana dashboards
+      become: true
+      copy:
+        src: ./templates/grafana/provisioning/dashboards
+        dest: /etc/grafana/provisioning
+        group: grafana
+
+    - name: copy grafana alerts
+      become: true
+      copy:
+        src: ./templates/grafana/provisioning/alerting
+        dest: /etc/grafana/provisioning
+        group: grafana
+
+    - name: start grafana
+      become: true
+      service:
+        name: grafana-server
+        enabled: true
+        state: restarted
+
+- name: Install prometheus
+  tags: prometheus
+  hosts: monitor
+  tasks:
+
+    - name: download Prometheus
+      get_url:
+        url: https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz
+        dest: "./"
+
+    - name: unarchive prometheus
+      unarchive:
+        remote_src: true
+        src: ./prometheus-{{ prometheus_version }}.linux-amd64.tar.gz
+        dest: "./"
+
+    - name: copy prometheus in /etc
+      become: true
+      copy:
+        remote_src: true
+        src: ./prometheus-{{ prometheus_version }}.linux-amd64
+        dest: /etc/
+
+    - name: create prometheus config
+      become: true
+      template:
+        src: prometheus.yml.j2
+        dest: /etc/prometheus-{{ prometheus_version }}.linux-amd64/prometheus.yml
+
+    - name: Create symlink for prometheus
+      become: true
+      file:
+        src: "/etc/prometheus-{{ prometheus_version }}.linux-amd64/prometheus"
+        path: "/usr/bin/prometheus"
+        state: link
+
+    - name: Create systemd config
+      become: true
+      template:
+        src: prometheus.service.j2
+        dest: "/etc/systemd/system/prometheus.service"
+        mode: 0644
+
+    - name: Start prometheus
+      become: true
+      service:
+        name: prometheus
+        enabled: true
+        state: restarted
+
+- name: Install node exporter
+  tags: node_exporter
+  hosts: monitor
+  tasks:
+
+    - name: download node exporter
+      get_url:
+        url: https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz
+        dest: "./"
+
+    - name: unarchive node exporter
+      unarchive:
+        remote_src: true
+        src: ./node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz
+        dest: "./"
+
+    - name: copy node_exporter in /etc
+      become: true
+      copy:
+        remote_src: true
+        src: ./node_exporter-{{ node_exporter_version }}.linux-amd64
+        dest: /etc/
+
+    - name: Create symlink for node_exporter
+      become: true
+      file:
+        src: "/etc/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter"
+        path: "/usr/bin/node_exporter"
+        state: link
+
+    - name: Create systemd config
+      become: true
+      template:
+        src: node_exporter.service.j2
+        dest: "/etc/systemd/system/node_exporter.service"
+        mode: 0644
+
+    - name: Start node_exporter
+      become: true
+      service:
+        name: node_exporter
+        enabled: true
+        state: restarted
+
+...

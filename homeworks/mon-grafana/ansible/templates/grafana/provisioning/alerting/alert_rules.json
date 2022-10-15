@@ -1,0 +1,413 @@
+{
+    "apiVersion": 1,
+    "groups": [{
+            "name": "CPU",
+            "interval": "1m",
+            "folder": "Alerts",
+            "rules": [{
+                    "expr": "",
+                    "for": "5m",
+                    "annotations": {
+                        "__dashboardUid__": "NoIbcDSVz",
+                        "__panelId__": "4"
+                    },
+                    "id": 2,
+                    "orgId": 1,
+                    "title": "CPU Load Average",
+                    "condition": "D",
+                    "data": [{
+                            "refId": "A",
+                            "queryType": "",
+                            "relativeTimeRange": {
+                                "from": 900,
+                                "to": 0
+                            },
+                            "datasourceUid": "PBCBAB2E65C7B6AAF",
+                            "model": {
+                                "datasource": {
+                                    "type": "prometheus",
+                                    "uid": "PBCBAB2E65C7B6AAF"
+                                },
+                                "editorMode": "builder",
+                                "expr": "node_load1{job=\"node_exporter\"}",
+                                "interval": "",
+                                "intervalMs": 15000,
+                                "legendFormat": "__auto",
+                                "maxDataPoints": 43200,
+                                "range": true,
+                                "refId": "A"
+                            }
+                        }, {
+                            "refId": "B",
+                            "queryType": "",
+                            "relativeTimeRange": {
+                                "from": 900,
+                                "to": 0
+                            },
+                            "datasourceUid": "PBCBAB2E65C7B6AAF",
+                            "model": {
+                                "datasource": {
+                                    "type": "prometheus",
+                                    "uid": "PBCBAB2E65C7B6AAF"
+                                },
+                                "editorMode": "builder",
+                                "expr": "node_load5{job=\"node_exporter\"}",
+                                "hide": false,
+                                "interval": "",
+                                "intervalMs": 15000,
+                                "legendFormat": "__auto",
+                                "maxDataPoints": 43200,
+                                "range": true,
+                                "refId": "B"
+                            }
+                        }, {
+                            "refId": "C",
+                            "queryType": "",
+                            "relativeTimeRange": {
+                                "from": 900,
+                                "to": 0
+                            },
+                            "datasourceUid": "PBCBAB2E65C7B6AAF",
+                            "model": {
+                                "datasource": {
+                                    "type": "prometheus",
+                                    "uid": "PBCBAB2E65C7B6AAF"
+                                },
+                                "editorMode": "builder",
+                                "expr": "node_load15{job=\"node_exporter\"}",
+                                "hide": false,
+                                "interval": "",
+                                "intervalMs": 15000,
+                                "legendFormat": "__auto",
+                                "maxDataPoints": 43200,
+                                "range": true,
+                                "refId": "C"
+                            }
+                        }, {
+                            "refId": "D",
+                            "queryType": "",
+                            "relativeTimeRange": {
+                                "from": 0,
+                                "to": 0
+                            },
+                            "datasourceUid": "-100",
+                            "model": {
+                                "conditions": [{
+                                        "evaluator": {
+                                            "params": [0.3],
+                                            "type": "gt"
+                                        },
+                                        "operator": {
+                                            "type": "when"
+                                        },
+                                        "query": {
+                                            "params": ["A"]
+                                        },
+                                        "reducer": {
+                                            "params": [],
+                                            "type": "last"
+                                        },
+                                        "type": "query"
+                                    }
+                                ],
+                                "datasource": {
+                                    "type": "__expr__",
+                                    "uid": "-100"
+                                },
+                                "expression": "A",
+                                "hide": false,
+                                "intervalMs": 1000,
+                                "maxDataPoints": 43200,
+                                "refId": "D",
+                                "type": "classic_conditions"
+                            }
+                        }
+                    ],
+                    "updated": "2022-10-15T11:56:57Z",
+                    "intervalSeconds": 60,
+                    "version": 2,
+                    "uid": "BnsJo0SVk",
+                    "namespace_uid": "hXBzT0SVk",
+                    "namespace_id": 1,
+                    "rule_group": "CPU",
+                    "no_data_state": "NoData",
+                    "exec_err_state": "Error"
+                }, {
+                    "expr": "",
+                    "for": "5m",
+                    "id": 4,
+                    "orgId": 1,
+                    "title": "CPU Utilisation",
+                    "condition": "B",
+                    "data": [{
+                            "refId": "A",
+                            "queryType": "",
+                            "relativeTimeRange": {
+                                "from": 600,
+                                "to": 0
+                            },
+                            "datasourceUid": "PBCBAB2E65C7B6AAF",
+                            "model": {
+                                "editorMode": "code",
+                                "expr": " 100 - (avg by(instance) (rate(node_cpu_seconds_total{job=\"node_exporter\", mode=\"idle\"}[1m])) * 100)",
+                                "hide": false,
+                                "intervalMs": 1000,
+                                "legendFormat": "__auto",
+                                "maxDataPoints": 43200,
+                                "range": true,
+                                "refId": "A"
+                            }
+                        }, {
+                            "refId": "B",
+                            "queryType": "",
+                            "relativeTimeRange": {
+                                "from": 0,
+                                "to": 0
+                            },
+                            "datasourceUid": "-100",
+                            "model": {
+                                "conditions": [{
+                                        "evaluator": {
+                                            "params": [40],
+                                            "type": "gt"
+                                        },
+                                        "operator": {
+                                            "type": "and"
+                                        },
+                                        "query": {
+                                            "params": ["A"]
+                                        },
+                                        "reducer": {
+                                            "params": [],
+                                            "type": "last"
+                                        },
+                                        "type": "query"
+                                    }
+                                ],
+                                "datasource": {
+                                    "type": "__expr__",
+                                    "uid": "-100"
+                                },
+                                "expression": "A",
+                                "hide": false,
+                                "intervalMs": 1000,
+                                "maxDataPoints": 43200,
+                                "refId": "B",
+                                "type": "classic_conditions"
+                            }
+                        }
+                    ],
+                    "updated": "2022-10-15T11:56:57Z",
+                    "intervalSeconds": 60,
+                    "version": 1,
+                    "uid": "FLxOAASVz",
+                    "namespace_uid": "hXBzT0SVk",
+                    "namespace_id": 1,
+                    "rule_group": "CPU",
+                    "no_data_state": "NoData",
+                    "exec_err_state": "Error"
+                }
+            ]
+        }, {
+            "name": "DiskSpace",
+            "interval": "1m",
+            "folder": "Alerts",
+            "rules": [{
+                    "expr": "",
+                    "for": "5m",
+                    "annotations": {
+                        "__dashboardUid__": "NoIbcDSVz",
+                        "__panelId__": "8"
+                    },
+                    "id": 3,
+                    "orgId": 1,
+                    "title": "Free disks space",
+                    "condition": "B",
+                    "data": [{
+                            "refId": "A",
+                            "queryType": "",
+                            "relativeTimeRange": {
+                                "from": 900,
+                                "to": 0
+                            },
+                            "datasourceUid": "PBCBAB2E65C7B6AAF",
+                            "model": {
+                                "datasource": {
+                                    "type": "prometheus",
+                                    "uid": "PBCBAB2E65C7B6AAF"
+                                },
+                                "editorMode": "code",
+                                "expr": "node_filesystem_free_bytes{instance=\"localhost:9100\"}",
+                                "interval": "",
+                                "intervalMs": 15000,
+                                "legendFormat": "__auto",
+                                "maxDataPoints": 43200,
+                                "range": true,
+                                "refId": "A"
+                            }
+                        }, {
+                            "refId": "B",
+                            "queryType": "",
+                            "relativeTimeRange": {
+                                "from": 0,
+                                "to": 0
+                            },
+                            "datasourceUid": "-100",
+                            "model": {
+                                "conditions": [{
+                                        "evaluator": {
+                                            "params": [7500000000],
+                                            "type": "lt"
+                                        },
+                                        "operator": {
+                                            "type": "and"
+                                        },
+                                        "query": {
+                                            "params": ["C"]
+                                        },
+                                        "reducer": {
+                                            "params": [],
+                                            "type": "last"
+                                        },
+                                        "type": "query"
+                                    }
+                                ],
+                                "datasource": {
+                                    "type": "__expr__",
+                                    "uid": "-100"
+                                },
+                                "expression": "A",
+                                "hide": false,
+                                "intervalMs": 1000,
+                                "maxDataPoints": 43200,
+                                "refId": "B",
+                                "type": "classic_conditions"
+                            }
+                        }, {
+                            "refId": "C",
+                            "queryType": "",
+                            "relativeTimeRange": {
+                                "from": 600,
+                                "to": 0
+                            },
+                            "datasourceUid": "PBCBAB2E65C7B6AAF",
+                            "model": {
+                                "datasource": {
+                                    "type": "prometheus",
+                                    "uid": "PBCBAB2E65C7B6AAF"
+                                },
+                                "editorMode": "builder",
+                                "expr": "node_filesystem_free_bytes{device=\"/dev/vda2\"}",
+                                "hide": false,
+                                "intervalMs": 1000,
+                                "legendFormat": "__auto",
+                                "maxDataPoints": 43200,
+                                "range": true,
+                                "refId": "C"
+                            }
+                        }
+                    ],
+                    "updated": "2022-10-15T11:49:16Z",
+                    "intervalSeconds": 60,
+                    "version": 1,
+                    "uid": "7F09T0S4k",
+                    "namespace_uid": "hXBzT0SVk",
+                    "namespace_id": 1,
+                    "rule_group": "DiskSpace",
+                    "no_data_state": "NoData",
+                    "exec_err_state": "Error"
+                }
+            ]
+        }, {
+            "name": "RAM",
+            "interval": "1m",
+            "folder": "Alerts",
+            "rules": [{
+                    "expr": "",
+                    "for": "5m",
+                    "annotations": {
+                        "__dashboardUid__": "NoIbcDSVz",
+                        "__panelId__": "6"
+                    },
+                    "id": 1,
+                    "orgId": 1,
+                    "title": "Free memory",
+                    "condition": "B",
+                    "data": [{
+                            "refId": "A",
+                            "queryType": "",
+                            "relativeTimeRange": {
+                                "from": 900,
+                                "to": 0
+                            },
+                            "datasourceUid": "PBCBAB2E65C7B6AAF",
+                            "model": {
+                                "datasource": {
+                                    "type": "prometheus",
+                                    "uid": "PBCBAB2E65C7B6AAF"
+                                },
+                                "editorMode": "code",
+                                "expr": "node_memory_MemFree_bytes{job=\"node_exporter\"}",
+                                "interval": "",
+                                "intervalMs": 15000,
+                                "legendFormat": "__auto",
+                                "maxDataPoints": 43200,
+                                "range": true,
+                                "refId": "A"
+                            }
+                        }, {
+                            "refId": "B",
+                            "queryType": "",
+                            "relativeTimeRange": {
+                                "from": 0,
+                                "to": 0
+                            },
+                            "datasourceUid": "-100",
+                            "model": {
+                                "conditions": [{
+                                        "evaluator": {
+                                            "params": [2140000000],
+                                            "type": "lt"
+                                        },
+                                        "operator": {
+                                            "type": "and"
+                                        },
+                                        "query": {
+                                            "params": ["A"]
+                                        },
+                                        "reducer": {
+                                            "params": null,
+                                            "type": "last"
+                                        },
+                                        "type": "query"
+                                    }
+                                ],
+                                "datasource": {
+                                    "type": "__expr__",
+                                    "uid": "-100"
+                                },
+                                "expression": "A",
+                                "hide": false,
+                                "intervalMs": 1000,
+                                "maxDataPoints": 43200,
+                                "refId": "B",
+                                "type": "classic_conditions"
+                            }
+                        }
+                    ],
+                    "updated": "2022-10-15T11:34:36Z",
+                    "intervalSeconds": 60,
+                    "version": 1,
+                    "uid": "k-6XiAI4z",
+                    "namespace_uid": "hXBzT0SVk",
+                    "namespace_id": 1,
+                    "rule_group": "RAM",
+                    "no_data_state": "NoData",
+                    "exec_err_state": "Alerting",
+                    "provenance": "file"
+                }
+            ]
+        }
+    ]
+}
+

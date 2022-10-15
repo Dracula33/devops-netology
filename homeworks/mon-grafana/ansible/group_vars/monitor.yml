@@ -1,0 +1,8 @@
+---
+grafana_version: 9.2.0
+prometheus_version: 2.39.1
+node_exporter_version: 1.4.0
+
+smtp_server_host_port: smtp.mail.ru:465
+email: *********@mail.ru
+email_pass: ***********

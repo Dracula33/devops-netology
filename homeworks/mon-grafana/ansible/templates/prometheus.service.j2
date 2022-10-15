@@ -1,0 +1,20 @@
+[Unit]
+Description=Prometheus Service
+Documentation=https://prometheus.io
+
+[Service]
+Type=simple
+
+User=root
+Group=root
+PIDFile=/var/run/prometheus.pid
+WorkingDirectory=/etc/prometheus-{{ prometheus_version }}.linux-amd64
+
+ExecStart=/usr/bin/prometheus
+
+Restart=on-failure
+RestartSec=30
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
