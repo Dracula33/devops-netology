@@ -1,0 +1,54 @@
+---
+- name: Run ELK
+  become: true
+  hosts: elk
+  tasks:
+
+    - name: change max virtual memory
+      ansible.posix.sysctl:
+        name: vm.max_map_count
+        value: 262144
+        state: present
+
+    - name: Add docker repository
+      command: yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+
+    - name: Installing docker package
+      yum: >
+        name={{ item }}
+        state=present
+        update_cache=yes
+      with_items:
+        - docker-ce
+        - docker-ce-cli
+        - containerd.io
+
+    - name: Create docker group
+      group:
+        name: docker
+        state: present
+
+    - name: Add user to docker group
+      user:
+        user: "{{ ansible_user }}"
+        group: docker
+
+    - name: Enable docker daemon
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Install docker-compose
+      raw: $(curl -L https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m` -o /usr/bin/docker-compose && chmod +x /usr/bin/docker-compose)
+
+    - name: Copy help files
+      tags: last
+      copy:
+        src: "help"
+        dest: "./"
+
+    - name: start elk
+      tags: last
+      command: docker-compose -f ./help/docker-compose.yml up -d
+...
