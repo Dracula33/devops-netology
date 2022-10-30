@@ -1,0 +1,87 @@
+---
+- name: Run redis cluster
+  hosts: redis
+  tasks:
+
+    - name: disable SELinux
+      become: true
+      selinux:
+        state: disabled
+
+    - name: enable overcommit
+      become: true
+      sysctl:
+        name: vm.overcommit_memory
+        value: 1
+        state: present
+
+    - name: Fix DNF
+      become: true
+      shell: "sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-* && sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*"
+
+    - name: Installing redis
+      become: true
+      dnf:
+        name: redis
+        state: present
+        update_cache: yes
+
+    - name: Set redis master port
+      set_fact:
+        redis_port: 6379
+
+    - name: Copy redis config
+      become: true
+      template:
+        src: redis.conf.j2
+        dest: /etc/redis.conf
+        group: root
+        owner: redis
+        mode: 0640
+
+    - name: Set redis replica port
+      set_fact:
+        redis_port: 7000
+
+    - name: Copy redis config
+      become: true
+      template:
+        src: redis.conf.j2
+        dest: /etc/redis-replica.conf
+        group: root
+        owner: redis
+        mode: 0640
+
+    - name: create redis replica
+      become: true
+      copy:
+        src: redis-replica.service
+        dest: /usr/lib/systemd/system/redis-replica.service
+        mode: 0644
+
+    - name: Enable redis daemon
+      become: true
+      systemd:
+        name: "{{ item }}"
+        state: restarted
+        enabled: yes
+        daemon_reload: true
+      with_items:
+        - redis
+        - redis-replica
+
+    - name: Create redis cluster
+      run_once: true
+      shell: >
+          echo yes | redis-cli --cluster create
+          {{ hostvars['redis-01']['ansible_host'] }}:6379 {{ hostvars['redis-01']['ansible_host'] }}:7000
+          {{ hostvars['redis-02']['ansible_host'] }}:6379 {{ hostvars['redis-02']['ansible_host'] }}:7000
+          {{ hostvars['redis-03']['ansible_host'] }}:6379 {{ hostvars['redis-03']['ansible_host'] }}:7000
+          --cluster-replicas 1
+      register: cluster_state
+
+    - name: Print cluster state
+      run_once: true
+      debug:
+        var: cluster_state
+...
