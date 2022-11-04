@@ -1,0 +1,238 @@
+---
+- name: install minikube
+  hosts: minikube
+  tags: minikube
+  tasks:
+
+    - name: get kubectl version
+      set_fact:
+        kubectl_version: "{{ lookup('url', 'https://storage.googleapis.com/kubernetes-release/release/stable.txt') }}"
+
+    - name: print kub version
+      debug:
+        var: kubectl_version
+
+    - name: download binaries
+      get_url:
+        url: "{{ item }}"
+        dest: "."
+      with_items:
+        - https://storage.googleapis.com/kubernetes-release/release/{{ kubectl_version }}/bin/linux/amd64/kubectl
+        - https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+
+    - name: copy binaries to /usr
+      become: true
+      copy:
+        src: ./{{ item.src }}
+        dest: /usr/local/bin/{{ item.dest }}
+        remote_src: true
+        mode: 0711
+      loop:
+        - src: kubectl
+          dest: kubectl
+        - src: minikube-linux-amd64
+          dest: minikube
+
+    - name: install packages
+      become: true
+      apt:
+        name:
+          - docker.io
+          - conntrack
+          - socat
+        state: present
+        update_cache: true
+
+    - name: Change sysctl for restarting minikube
+      become: true
+      sysctl:
+        name: fs.protected_regular
+        value: 0
+        state: present
+
+- name: install go
+  hosts: minikube
+  tags: go
+  tasks:
+
+    - name: download go
+      get_url:
+        url: https://golang.org/dl/go1.19.3.linux-amd64.tar.gz
+        dest: "."
+
+    - name: unarchive go
+      unarchive:
+        src: ./go1.19.3.linux-amd64.tar.gz
+        dest: "."
+        remote_src: true
+
+    - name: copy go
+      become: true
+      copy:
+        src: ./go
+        dest: /usr/local/
+        remote_src: true
+
+- name: install cri-dockerd
+  hosts: minikube
+  tags: cri
+  tasks:
+
+    - name: clone cri-dockerd repo
+      git:
+        repo: https://github.com/Mirantis/cri-dockerd.git
+        dest: "./cri-dockerd"
+
+    - name: create bin dir
+      file:
+        state: directory
+        path: ./cri-dockerd/bin
+
+    - name: check build
+      stat:
+        path: ./cri-dockerd/bin/cri-dockerd
+      register: cri_docker_bin
+
+    - name: run build
+      shell: cd ./cri-dockerd && go build -o bin/cri-dockerd
+      args:
+        executable: /bin/bash
+      environment:
+        PATH: "{{ ansible_env.PATH }}:/usr/local/go/bin"
+      when: not cri_docker_bin.stat.exists
+
+    - name: copy cri-dockerd in /usr
+      become: true
+      copy:
+        remote_src: true
+        src: ./cri-dockerd/bin/cri-dockerd
+        dest: /usr/local/bin/cri-dockerd
+        owner: root
+        group: root
+        mode: 0755
+
+    - name: create cri-dockerd systemd.conf
+      become: true
+      template:
+        src: cri-docker.service.j2
+        dest: /etc/systemd/system/cri-docker.service
+        owner: root
+        group: root
+        mode: 0755
+
+    - name: copy cri-dockerd socket
+      become: true
+      copy:
+        remote_src: true
+        src: ./cri-dockerd/packaging/systemd/cri-docker.socket
+        dest: /etc/systemd/system/cri-docker.socket
+        owner: root
+        group: root
+        mode: 0755
+
+    - name: run cri-dockerd
+      become: true
+      systemd:
+        name: "{{ item }}"
+        enabled: true
+        state: restarted
+        daemon_reload: true
+      loop:
+        - cri-docker.service
+        - cri-docker.socket
+
+    - name: add repo
+      shell: >
+        OS=xUbuntu_20.04 &&
+        echo "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/$OS/ /" |
+        sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list &&
+        echo "deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/1.25:/1.25.1/$OS/ /" |
+        sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:stable:cri-o:$CRIO_VERSION.list
+
+    - name: add gpg1
+      become: true
+      shell: curl -L https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:/1.25:/1.25.1/xUbuntu_20.04/Release.key | sudo apt-key add -
+
+    - name: add gpg2
+      become: true
+      shell: curl -L https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_20.04/Release.key | sudo apt-key add -
+
+    - name: install packages
+      become: true
+      apt:
+        name:
+          - cri-tools
+        state: present
+        update_cache: true
+
+
+- name: Start minikube
+  hosts: minikube
+  become: true
+  tags: hw
+  tasks:
+
+    - name: get minikube version
+      shell: minikube version
+      register: minikube_version
+
+    - debug: var=minikube_version.stdout_lines
+
+    - name: start minikube
+      shell: minikube start --vm-driver=none
+      register: minikube_start
+
+    - debug: var=minikube_start.stdout_lines
+
+    - name: check minikube is running
+      shell: minikube status
+      register: minikube_status
+
+    - debug: var=minikube_status.stdout_lines
+
+    - name: list pods
+      shell: kubectl get pods -A
+      register: minikube_pods
+
+    - debug: var=minikube_pods.stdout_lines
+
+    - name: install calico CNI
+      shell: kubectl apply -f https://docs.projectcalico.org/manifests/calico-typha.yaml
+
+    - name: Pause for starting calico
+      pause:
+        prompt: It takes about a minute while three calico pods get started
+        minutes: 1
+
+    - name: list nodes
+      shell: kubectl get nodes
+      register: minikube_nodes
+
+    - debug: var=minikube_nodes.stdout_lines
+
+    - name: Run hello-node
+      shell: kubectl create deployment hello-node --image=k8s.gcr.io/echoserver:1.4
+
+    - name: Install dashboard
+      shell: kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.7.0/aio/deploy/recommended.yaml
+
+    - name: Copy manifest to access dashboard
+      copy:
+        src: dashboard-access
+        dest: "."
+
+    - name: Run manifest for getting rights
+      shell: kubectl apply -f dashboard-access/ClusterRoleBinding_kubernetes-dashboard.yaml
+
+    - name: print token for access dashboard
+      shell: kubectl -n kubernetes-dashboard create token kubernetes-dashboard
+      register: k8s_dashboard_token
+
+    - debug: var=k8s_dashboard_token.stdout_lines
+
+    - name: enable ingress
+      shell: minikube addons enable ingress
+
+    - name: run manifest for creating ingress
+      shell: kubectl apply -f dashboard-access/ingress.yaml -n kubernetes-dashboard
+    
