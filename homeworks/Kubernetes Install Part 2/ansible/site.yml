@@ -1,0 +1,58 @@
+---
+
+- name: prepare control-plane
+  hosts: node1
+  tasks:
+
+  - name: install utilities
+    become: true
+    apt:
+      name: "{{ item }}"
+      update_cache: true
+    loop:
+      - git
+      - python3-pip
+
+  - name: clone kubespray
+    git:
+      repo: https://github.com/kubernetes-sigs/kubespray.git
+      dest: ~/kubespray
+
+  - name: install requirements
+    pip:
+      requirements: ~/kubespray/requirements.txt
+
+  - name: copy inventory
+    copy:
+      src: ./hosts.yml
+      dest: ~/kubespray/hosts.yml
+
+  - name: generate ssh keys
+    shell: ssh-keygen -q -f ~/.ssh/id_rsa -N ''
+    args:
+      creates: ~/.ssh/id_rsa
+
+  - name: copy ssh pub from server
+    fetch:
+      src: ~/.ssh/id_rsa.pub
+      dest: "/tmp/"
+      flat: yes
+
+- name: some tasks for all hosts
+  hosts: all
+  tasks:
+
+  - name: add pubkey for all hosts
+    authorized_key:
+      user: "{{ ansible_user }}"
+      state: present
+      key: "{{ lookup('file', '/tmp/id_rsa.pub') }}"
+
+#- name: run kubspray
+#  hosts: node1
+#  tasks:
+#
+#  - name: run playbook
+#    shell:
+#      cmd: ansible-playbook -b -i hosts.yaml cluster.yml > install.log 2>&1
+#      chdir: /home/ubuntu/kubespray
