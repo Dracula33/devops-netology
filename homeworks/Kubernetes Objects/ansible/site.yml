@@ -1,0 +1,180 @@
+---
+
+- name: prepare control-plane
+  hosts: node1
+  tasks:
+
+  - name: install utilities
+    become: true
+    apt:
+      name: "{{ item }}"
+      update_cache: true
+    loop:
+      - git
+      - python3-pip
+
+  - name: clone kubespray
+    git:
+      repo: https://github.com/kubernetes-sigs/kubespray.git
+      dest: ~/kubespray
+
+  - name: install requirements
+    pip:
+      requirements: ~/kubespray/requirements.txt
+
+  - name: copy inventory
+    copy:
+      src: ./hosts.yml
+      dest: ~/kubespray/hosts.yml
+
+  - name: generate ssh keys
+    shell: ssh-keygen -q -f ~/.ssh/id_rsa -N ''
+    args:
+      creates: ~/.ssh/id_rsa
+
+  - name: copy ssh pub from server
+    fetch:
+      src: ~/.ssh/id_rsa.pub
+      dest: "/tmp/"
+      flat: yes
+
+- name: some tasks for all hosts
+  hosts: all
+  tasks:
+
+  - name: add pubkey for all hosts
+    authorized_key:
+      user: "{{ ansible_user }}"
+      state: present
+      key: "{{ lookup('file', '/tmp/id_rsa.pub') }}"
+
+- name: run kubespray
+  hosts: node1
+  tags: kubespray
+  tasks:
+
+  - name: run kubespray
+    shell:
+      cmd: ansible-playbook -e container_manager=docker -b -i hosts.yml cluster.yml > install.log 2>&1
+      #cmd: ansible-playbook -b -i hosts.yml cluster.yml > install.log 2>&1
+      chdir: /home/ubuntu/kubespray
+      creates: install.log
+      executable: /bin/bash
+    environment:
+      PATH: "/home/ubuntu/.local/bin:{{ ansible_env.PATH }}"
+
+- name: Create and load images
+  hosts: node1
+  tags: image
+  tasks:
+
+  - name: copy sources
+    copy:
+      src: 13-kubernetes-config
+      dest: "."
+
+  - name: create frontend env
+    template:
+      src: env_frontend.j2
+      dest: 13-kubernetes-config/frontend/.env
+
+  - name: install docker
+    become: true
+    pip:
+      name: docker
+
+  - name: create IAM token
+    shell: "yc iam create-token | grep t1"
+    register: yc_iam_token
+    delegate_to: localhost
+    run_once: true
+
+  - name: authenticate docker registry
+    become: true
+    shell: docker login --username iam --password {{ yc_iam_token.stdout }} cr.yandex
+
+  - name: set registry_id
+    set_fact:
+      yc_registry_id: "{{ lookup('file','./reg_id.txt') }}"
+    run_once: true
+
+  - name: install npm for build frontend
+    become: true
+    apt:
+      name:
+        - nodejs
+        - npm
+      update_cache: true
+
+  - name: update npx
+    become: true
+    shell:
+      cmd: npx browserslist@latest --update-db
+      chdir: /home/ubuntu/13-kubernetes-config/frontend
+
+  - name: Build an images
+    become: true
+    community.docker.docker_image:
+      build:
+        path: /home/ubuntu/13-kubernetes-config/{{ item }}
+      name: cr.yandex/{{ yc_registry_id }}/{{ item }}_hw:0.1
+      push: true
+      source: build
+    run_once: true
+    loop:
+      - backend
+      - frontend
+
+- name: create objects
+  hosts: node1
+  tags: hw
+  tasks:
+
+  - name: copy manifests
+    copy:
+      src: manifests
+      dest: "."
+
+  - name: set registry_id
+    set_fact:
+      yc_registry_id: "{{ lookup('file','./reg_id.txt') }}"
+    run_once: true
+
+  - name: copy deployment.yaml
+    template:
+      src: manifests/{{ item }}/deployment.yaml.j2
+      dest: ./manifests/{{ item }}/deployment.yaml
+    loop:
+      - stage
+      - prod
+
+  - name: copy service.yaml
+    template:
+      src: manifests/{{ item }}/services.yaml.j2
+      dest: ./manifests/{{ item }}/services.yaml
+    loop:
+      - stage
+      - prod
+
+  - name: deploy stage
+    become: true
+    shell:
+      cmd: |
+        kubectl apply -f ./stage/statefulset.yaml
+        sleep 10
+        kubectl apply -f ./stage
+      chdir: /home/ubuntu/manifests
+    register: deploy_result
+
+  - name: check result
+    debug: var=deploy_result.stdout_lines
+
+- name: task with endpoints
+  tags: endpoint
+  hosts: node1
+  tasks:
+
+  - name: copy endpoint
+    copy:
+      src: manifests/endpoint
+      dest: ./manifests
