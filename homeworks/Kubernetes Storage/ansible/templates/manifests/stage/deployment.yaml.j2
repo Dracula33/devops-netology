@@ -1,0 +1,40 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-and-backend
+  labels:
+    app: frontend-and-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend-and-backend
+  template:
+    metadata:
+      labels:
+        app: frontend-and-backend
+    spec:
+      containers:
+        - image: frontend_hw:0.1
+          name: frontend
+          env:
+          - name: BASE_URL
+            value: http://{{ ansible_host }}:9000
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - mountPath: "/static1"
+              name: static-dir
+        - image: backend_hw:0.1
+          name: backend
+          env:
+          - name: DATABASE_URL
+            value: postgres://postgres:postgres@database:5432/postgres
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - mountPath: "/tmp/static2"
+              name: static-dir
+      volumes:
+        - name: static-dir
+          emptyDir: {}
+

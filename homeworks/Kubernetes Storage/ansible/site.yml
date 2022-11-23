@@ -1,0 +1,173 @@
+---
+
+- name: prepare control-plane
+  hosts: node1
+  tasks:
+
+  - name: install utilities
+    become: true
+    apt:
+      name: "{{ item }}"
+      update_cache: true
+    loop:
+      - git
+      - python3-pip
+
+  - name: clone kubespray
+    git:
+      repo: https://github.com/kubernetes-sigs/kubespray.git
+      dest: ~/kubespray
+
+  - name: install requirements
+    pip:
+      requirements: ~/kubespray/requirements.txt
+
+  - name: copy inventory
+    copy:
+      src: ./hosts.yml
+      dest: ~/kubespray/hosts.yml
+
+  - name: generate ssh keys
+    shell: ssh-keygen -q -f ~/.ssh/id_rsa -N ''
+    args:
+      creates: ~/.ssh/id_rsa
+
+  - name: copy ssh pub from server
+    fetch:
+      src: ~/.ssh/id_rsa.pub
+      dest: "/tmp/"
+      flat: yes
+
+- name: some tasks for all hosts
+  hosts: all
+  tasks:
+
+  - name: add pubkey for all hosts
+    authorized_key:
+      user: "{{ ansible_user }}"
+      state: present
+      key: "{{ lookup('file', '/tmp/id_rsa.pub') }}"
+
+- name: run kubespray
+  hosts: node1
+  tags: kubespray
+  tasks:
+
+  - name: run kubespray
+    shell:
+      cmd: ansible-playbook -e container_manager=docker -b -i hosts.yml cluster.yml > install.log 2>&1
+      chdir: /home/ubuntu/kubespray
+      creates: install.log
+      executable: /bin/bash
+    environment:
+      PATH: "/home/ubuntu/.local/bin:{{ ansible_env.PATH }}"
+
+- name: Create images
+  hosts: node1
+  tags: image
+  tasks:
+
+  - name: clone sources for images
+    git:
+      repo: https://github.com/Dracula33/devops-netology.git
+      dest: /tmp/rep
+
+  - name: copy sources
+    copy:
+      src: "/tmp/rep/homeworks/Kubernetes Objects/ansible/files/13-kubernetes-config"
+      dest: "."
+      remote_src: true
+
+  - name: create frontend env
+    template:
+      src: env_frontend.j2
+      dest: 13-kubernetes-config/frontend/.env
+
+  - name: install docker
+    become: true
+    pip:
+      name: docker
+
+  - name: install npm for build frontend
+    become: true
+    apt:
+      name:
+        - nodejs
+        - npm
+      update_cache: true
+
+  - name: update npx
+    become: true
+    shell:
+      cmd: npx browserslist@latest --update-db
+      chdir: /home/ubuntu/13-kubernetes-config/frontend
+
+  - name: Build an images
+    become: true
+    community.docker.docker_image:
+      build:
+        path: /home/ubuntu/13-kubernetes-config/{{ item }}
+      name: "{{ item }}_hw:0.1"
+      source: build
+    run_once: true
+    loop:
+      - backend
+      - frontend
+
+- name: create objects
+  hosts: node1
+  tags: hw
+  tasks:
+
+  - name: copy manifests
+    copy:
+      src: manifests
+      dest: "."
+
+  - name: copy deployment.yaml
+    template:
+      src: manifests/{{ item }}/deployment.yaml.j2
+      dest: ./manifests/{{ item }}/deployment.yaml
+    loop:
+      - stage
+      - prod
+
+  - name: copy service.yaml
+    template:
+      src: manifests/{{ item }}/services.yaml.j2
+      dest: ./manifests/{{ item }}/services.yaml
+    loop:
+      - stage
+      - prod
+
+- name: helm
+  hosts: node1
+  tags: helm
+  tasks:
+
+  - name: install nfs-common
+    become: true
+    apt:
+      name: nfs-common
+      update_cache: true
+
+  - name: install helm
+    become: true
+    shell: curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+    args:
+      creates: /usr/local/bin/helm
+
+  - name: add repo
+    become: true
+    kubernetes.core.helm_repository:
+      name: stable
+      repo_url: "https://charts.helm.sh/stable"
+
+  - name: install nfs
+    become: true
+    kubernetes.core.helm:
+      name: nfs-server
+      chart_ref: stable/nfs-server-provisioner
+      release_namespace: nfs-stable
+      create_namespace: true
+      update_repo_cache: true
