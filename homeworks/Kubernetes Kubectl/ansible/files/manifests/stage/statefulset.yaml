@@ -1,0 +1,29 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: database
+spec:
+  selector:
+    matchLabels:
+      app: database
+  serviceName: "database"
+  replicas: 1
+  minReadySeconds: 0
+  template:
+    metadata:
+      labels:
+        app: database
+    spec:
+      terminationGracePeriodSeconds: 15
+      containers:
+      - image: postgres:13-alpine
+        name: database
+        env:
+        - name: POSTGRES_DB
+          value: postgres
+        - name: POSTGRES_USER
+          value: postgres
+        - name: POSTGRES_PASSWORD
+          value: postgres
+        imagePullPolicy: IfNotPresent
