@@ -1,0 +1,158 @@
+---
+
+- name: prepare control-plane
+  hosts: node1
+  tasks:
+
+  - name: install utilities
+    become: true
+    apt:
+      name: "{{ item }}"
+      update_cache: true
+    loop:
+      - git
+      - python3-pip
+
+  - name: clone kubespray
+    git:
+      repo: https://github.com/kubernetes-sigs/kubespray.git
+      dest: ~/kubespray
+
+  - name: install requirements
+    pip:
+      requirements: ~/kubespray/requirements.txt
+
+  - name: copy inventory
+    copy:
+      src: ./hosts.yml
+      dest: ~/kubespray/hosts.yml
+
+  - name: generate ssh keys
+    shell: ssh-keygen -q -f ~/.ssh/id_rsa -N ''
+    args:
+      creates: ~/.ssh/id_rsa
+
+  - name: copy ssh pub from server
+    fetch:
+      src: ~/.ssh/id_rsa.pub
+      dest: "/tmp/"
+      flat: yes
+
+- name: some tasks for all hosts
+  hosts: all
+  tasks:
+
+  - name: add pubkey for all hosts
+    authorized_key:
+      user: "{{ ansible_user }}"
+      state: present
+      key: "{{ lookup('file', '/tmp/id_rsa.pub') }}"
+
+- name: run kubespray
+  hosts: node1
+  tags: kubespray
+  tasks:
+
+  - name: run kubespray
+    shell:
+      cmd: ansible-playbook -b -e container_manager=docker -i hosts.yml cluster.yml > install.log 2>&1
+      chdir: /home/ubuntu/kubespray
+      creates: install.log
+      executable: /bin/bash
+    environment:
+      PATH: "/home/ubuntu/.local/bin:{{ ansible_env.PATH }}"
+
+- name: Create images
+  hosts: node1
+  tags: image
+  tasks:
+
+  - name: clone sources for images
+    git:
+      repo: https://github.com/Dracula33/devops-netology.git
+      dest: /tmp/rep
+
+  - name: copy sources
+    copy:
+      src: "/tmp/rep/homeworks/Kubernetes Objects/ansible/files/13-kubernetes-config"
+      dest: "."
+      remote_src: true
+
+  - name: create frontend env
+    template:
+      src: env_frontend.j2
+      dest: 13-kubernetes-config/frontend/.env
+
+  - name: install docker pip
+    become: true
+    pip:
+      name: docker
+
+  - name: install npm for build frontend
+    become: true
+    apt:
+      name:
+        - nodejs
+        - npm
+      update_cache: true
+
+  - name: update npx
+    become: true
+    shell:
+      cmd: npx browserslist@latest --update-db
+      chdir: /home/ubuntu/13-kubernetes-config/frontend
+
+  - name: Build an images
+    become: true
+    community.docker.docker_image:
+      build:
+        path: /home/ubuntu/13-kubernetes-config/{{ item }}
+      name: "{{ item }}_hw:0.1"
+      source: build
+    run_once: true
+    loop:
+      - backend
+      - frontend
+
+- name: create objects
+  hosts: node1
+  tags: hw
+  tasks:
+
+  - name: copy qbec config
+    become: true
+    copy:
+      src: qbec-hw
+      dest: "."
+
+- name: jsonnet and qbec
+  hosts: node1
+  tags: jaq
+  tasks:
+
+  - name: install jsonnet
+    become: true
+    pip:
+      name: jsonnet
+
+  - name: download qbec
+    get_url:
+      url: https://github.com/splunk/qbec/releases/download/v0.15.2/qbec-linux-amd64.tar.gz
+      dest: "/tmp"
+
+  - name: unarchive qbec
+    unarchive:
+      remote_src: true
+      src: /tmp/qbec-linux-amd64.tar.gz
+      dest: /tmp
+
+  - name: copy qbec
+    become: true
+    copy:
+      remote_src: true
+      src: "/tmp/{{ item }}"
+      dest: /usr/local/bin/
+      mode: 0755
+    loop:
+      - qbec
+      - jsonnet-qbec

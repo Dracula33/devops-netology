@@ -1,0 +1,19 @@
+apiVersion: qbec.io/v1alpha1
+kind: App
+metadata:
+  name: qbec-hw
+spec:
+  environments:
+    stage:
+      defaultNamespace: default
+      server: https://127.0.0.1:6443
+    prod:
+      defaultNamespace: default
+      server: https://127.0.0.1:6443
+      includes:
+        - endpoint_identme_svc
+        - endpoint_identme
+  vars: {}
+  excludes:
+    - endpoint_identme_svc
+    - endpoint_identme
