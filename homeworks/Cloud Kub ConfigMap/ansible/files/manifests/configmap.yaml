@@ -1,0 +1,116 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: conf
+data:
+  TEST_ENV: "Test env variabble"
+  tls.crt: |
+    -----BEGIN CERTIFICATE-----
+    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
+    mA==
+    -----END CERTIFICATE-----
+  tls.key: |
+    -----BEGIN RSA PRIVATE KEY-----
+    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
+    -----END RSA PRIVATE KEY-----
+  ssl.conf: |
+    server {
+      listen              80;
+      server_name         _;
+    
+      location / {
+        root   /usr/share/nginx/html;
+        index  index.html index.htm;
+      }
+    }
+    
+    server {
+      listen              443 ssl;
+      server_name         _;
+      ssl_certificate     /etc/nginx/conf/certs/tls.crt;
+      ssl_certificate_key /etc/nginx/conf/certs/tls.key;
+      ssl_protocols       TLSv1 TLSv1.1 TLSv1.2;
+      ssl_ciphers         HIGH:!aNULL:!MD5;
+    
+      location / {
+        root   /usr/share/nginx/html;
+        index  index.html index.htm;
+      }
+    }

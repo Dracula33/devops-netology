@@ -1,0 +1,18 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+spec:
+  type: NodePort
+  ports:
+    - name: ssl
+      port: 443
+      nodePort: 30000
+    - name: web
+      port: 80
+      nodePort: 30001
+  selector:
+    app: nginx
+
+

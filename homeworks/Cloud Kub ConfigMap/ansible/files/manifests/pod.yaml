@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: nginx
+  name: nginx
+spec:
+  containers:
+  - image: nginx:stable
+    name: nginx
+    imagePullPolicy: IfNotPresent
+    env:
+    - name: TEST_ENV
+      valueFrom:
+        configMapKeyRef:
+          name: conf
+          key: TEST_ENV
+    volumeMounts:
+    - name: certs
+      mountPath: "/etc/nginx/conf/certs"
+    - name: nginx-conf
+      mountPath: "/etc/nginx/conf.d"
+
+  volumes:
+  - name: certs
+    configMap:
+      name: conf
+      items:
+      - key: tls.crt
+        path: tls.crt
+      - key: tls.key
+        path: tls.key
+  - name: nginx-conf
+    configMap:
+      name: conf
+      items:
+      - key: ssl.conf
+        path: ssl.conf
