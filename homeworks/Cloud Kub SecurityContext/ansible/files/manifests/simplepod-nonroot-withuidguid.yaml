@@ -1,0 +1,16 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: simplepod-nonroot-withuidguid
+spec:
+  containers:
+  - name: simplepod-nonroot-withuidguid
+    image: centos:centos7
+    args:
+    - sleep
+    - "3600"
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000

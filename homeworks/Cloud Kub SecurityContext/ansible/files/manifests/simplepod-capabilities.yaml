@@ -1,0 +1,18 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: simplepod-capabilities
+spec:
+  containers:
+  - name: simplepod-capabilities
+    image: centos:centos7
+    args:
+    - sleep
+    - "3600"
+    securityContext:
+      capabilities:
+        drop:
+          - NET_RAW
+          - CHOWN
+          - KILL

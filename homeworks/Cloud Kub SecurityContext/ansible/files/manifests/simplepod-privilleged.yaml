@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: simplepod-privilleged
+spec:
+  containers:
+  - name: simplepod-privilleged
+    image: centos:centos7
+    args:
+    - sleep
+    - "3600"
+    securityContext:
+      privileged: true

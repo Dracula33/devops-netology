@@ -1,0 +1,93 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: pod1
+  name: pod1
+spec:
+  containers:
+  - name: pod1
+    image: nginx:1.23
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: pod2
+  name: pod2
+spec:
+  containers:
+  - name: pod2
+    image: nginx:1.23
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service1
+spec:
+  ports:
+    - name: web
+      port: 80
+  selector:
+    app: pod1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service2
+spec:
+  ports:
+    - name: web
+      port: 80
+  selector:
+    app: pod2
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: np-pod1
+spec:
+  podSelector:
+    matchLabels:
+      app: pod1
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+      - ipBlock:
+          cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 80
+    - to:
+      - ipBlock:
+          cidr: 169.254.25.10/32
+      ports:
+        - protocol: UDP
+          port: 53
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: np-pod2
+spec:
+  podSelector:
+    matchLabels:
+      app: pod2
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+      - podSelector:
+          matchLabels:
+            app: pod1
+      ports:
+        - protocol: TCP
+          port: 80
+    - to:
+      - ipBlock:
+          cidr: 169.254.25.10/32
+      ports:
+        - protocol: UDP
+          port: 53

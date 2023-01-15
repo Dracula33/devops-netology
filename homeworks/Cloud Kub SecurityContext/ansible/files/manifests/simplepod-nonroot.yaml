@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: simplepod-nonroot
+spec:
+  containers:
+  - name: simplepod-nonroot
+    image: centos:centos7
+    args:
+    - sleep
+    - "3600"
+    securityContext:
+      runAsNonRoot: true
