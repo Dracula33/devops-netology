@@ -1,0 +1,13 @@
+#cloud-config
+write_files:
+- content: |
+    <html>
+      <head>
+          <title>Picture from my S3</title>
+      </head>
+      <body>
+        <img src="https://storage.yandexcloud.net/hw-bucket/pic.jpg" alt="cat" width="500" height="500"/>
+      </body>
+    </html>
+  path: /var/www/html/my_pic.html
+  permissons: '0644'
