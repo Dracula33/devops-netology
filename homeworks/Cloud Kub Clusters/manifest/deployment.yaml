@@ -1,0 +1,47 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: php-myadmin
+  labels:
+    app: php-myadmin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: php-myadmin
+  template:
+    metadata:
+      labels:
+        app: php-myadmin
+    spec:
+      containers:
+        - image: phpmyadmin:5.2.1
+          name: php-myadmin
+          env:
+          - name: PMA_HOST
+            valueFrom:
+              configMapKeyRef:
+                name: dbconf
+                key: mysql_host
+          - name: PMA_PORT
+            valueFrom:
+              configMapKeyRef:
+                name: dbconf
+                key: mysql_port
+          - name: MYSQL_USER
+            valueFrom:
+              configMapKeyRef:
+                name: dbconf
+                key: mysql_user
+          - name: MYSQL_PASSWORD
+            valueFrom:
+              configMapKeyRef:
+                name: dbconf
+                key: mysql_user_pass
+          - name: PMA_PMADB
+            valueFrom:
+              configMapKeyRef:
+                name: dbconf
+                key: mysql_dbname
+          imagePullPolicy: IfNotPresent

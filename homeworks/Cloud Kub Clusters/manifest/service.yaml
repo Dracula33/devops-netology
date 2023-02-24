@@ -1,0 +1,13 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: php-myadmin
+spec:
+  type: LoadBalancer
+  selector:
+    app: php-myadmin
+  ports:
+    - name: web
+      port: 80
+
